@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d11">
+<title>NBA Break Board</title>
+<style>
+  :root {
+    --bg: #0b0d11;
+    --panel: #14171d;
+    --line: #262b34;
+    --text: #f2f5f8;
+    --muted: #8b95a5;
+    --accent: #f7b32b;
+    --x: #ff3546;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    padding: 14px 10px calc(28px + env(safe-area-inset-bottom));
+    max-width: 560px;
+    margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- header ---------- */
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .home {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .home:hover { color: var(--text); }
+
+  /* ---------- grid ---------- */
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .cell {
+    position: relative;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid rgba(255,255,255,.12);
+    border-radius: 10px;
+    padding: 0;
+    aspect-ratio: 74 / 94;
+    background: var(--c);
+    color: var(--fg);
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    transition: transform .16s ease, opacity .18s ease, box-shadow .18s ease,
+                border-color .18s ease, filter .18s ease;
+  }
+
+  .cell:active { transform: scale(.94); }
+
+  /* the poster tile fills the cell edge to edge */
+  .cell .logo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+  }
+
+  /* shown only when a logo file is missing */
+  .cell .fallback {
+    font-size: clamp(.85rem, 3.8vw, 1.3rem);
+    font-weight: 800;
+    letter-spacing: .02em;
+    pointer-events: none;
+  }
+
+  /* crossed-off state: dim + red X */
+
+  .cell.taken {
+    opacity: .28;
+    filter: grayscale(.85);
+    border-color: rgba(255,255,255,.06);
+  }
+
+  .cell.taken::before,
+  .cell.taken::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 150%;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--x);
+    box-shadow: 0 0 8px rgba(255,53,70,.75);
+  }
+
+  .cell.taken::before { transform: translate(-50%, -50%) rotate(42deg); }
+  .cell.taken::after  { transform: translate(-50%, -50%) rotate(-42deg); }
+
+  /* spinner pass-through highlight */
+
+  .cell.spinning {
+    opacity: 1;
+    filter: none;
+    transform: scale(1.09);
+    border-color: #fff;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.3), 0 0 22px rgba(255,255,255,.55);
+    z-index: 2;
+  }
+
+  /* landed winner (also crossed off) */
+
+  .cell.winner {
+    opacity: 1;
+    filter: none;
+    transform: scale(1.12);
+    border-color: #ffd54a;
+    box-shadow: 0 0 0 3px rgba(255,213,74,.4), 0 0 30px rgba(255,213,74,.7);
+    z-index: 3;
+    animation: pop .45s ease;
+  }
+
+  .cell.winner::before,
+  .cell.winner::after { opacity: .85; }
+
+  @keyframes pop {
+    0%   { transform: scale(.88); }
+    55%  { transform: scale(1.2); }
+    100% { transform: scale(1.12); }
+  }
+
+  /* ---------- controls ---------- */
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  button.action {
+    flex: 1;
+    appearance: none;
+    border: none;
+    border-radius: 14px;
+    padding: 16px 12px;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #0b0d11;
+    background: var(--accent);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform .12s ease, opacity .18s ease;
+  }
+
+  button.action:active { transform: scale(.97); }
+
+  button.action.ghost {
+    flex: 0 0 auto;
+    min-width: 104px;
+    background: transparent;
+    color: var(--muted);
+    border: 2px solid var(--line);
+  }
+
+  button.action.ghost:hover { color: var(--text); border-color: #3b424e; }
+
+  button.action:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ---------- result panel ---------- */
+
+  #result {
+    margin-top: 14px;
+    min-height: 104px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--panel);
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  #result .label {
+    font-size: .68rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  #result .name {
+    font-size: clamp(1.4rem, 6.5vw, 2.4rem);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -.01em;
+    margin-top: 4px;
+  }
+
+  #result .swatch {
+    flex: 0 0 auto;
+    width: 68px;
+    aspect-ratio: 74 / 94;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--sc);
+    color: var(--sfg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    border: 2px solid rgba(255,255,255,.16);
+  }
+
+  #result .swatch img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  #result.idle { color: var(--muted); font-weight: 600; }
+
+  #result.done .name { color: #ffd54a; }
+
+  .status {
+    margin-top: 10px;
+    text-align: center;
+    font-size: .8rem;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+
+  @media (min-width: 560px) {
+    body { padding: 22px 18px 40px; }
+    h1 { font-size: 1.4rem; }
+    #grid { gap: 9px; }
+    .cell { border-radius: 13px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cell, button.action { transition: none; }
+    .cell.winner { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>NBA <span>Break Board</span></h1>
+  <a class="home" href="index.html">&larr; All boards</a>
+</header>
+
+<div id="grid" role="group" aria-label="NBA teams"></div>
+
+<div class="controls">
+  <button id="spin" class="action" type="button">Spin / Reveal</button>
+  <button id="reset" class="action ghost" type="button">Reset</button>
+</div>
+
+<div id="result" class="idle" aria-live="polite">Tap teams to cross them off, then hit Spin.</div>
+<div class="status" id="status"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ------------------------------------------------------------------
+     Team data: [abbreviation, full name, tile background color]
+     Logos live at assets/nba/<lowercase abbr>.png, read relative
+     to this file. EXTS is tried in order, so swapping in .svg/.webp
+     artwork works without touching this list. If no file is found the
+     cell falls back to the abbreviation on the color below.
+  ------------------------------------------------------------------ */
+
+  var TEAMS = [
+      [
+          "BOS",
+          "Boston Celtics",
+          "#2B863E"
+      ],
+      [
+          "BKN",
+          "Brooklyn Nets",
+          "#70717C"
+      ],
+      [
+          "NYK",
+          "New York Knicks",
+          "#F39310"
+      ],
+      [
+          "PHI",
+          "Philadelphia 76ers",
+          "#C7201D"
+      ],
+      [
+          "TOR",
+          "Toronto Raptors",
+          "#3511A5"
+      ],
+      [
+          "CHI",
+          "Chicago Bulls",
+          "#E61F36"
+      ],
+      [
+          "CLE",
+          "Cleveland Cavaliers",
+          "#DFB64E"
+      ],
+      [
+          "DET",
+          "Detroit Pistons",
+          "#2827AC"
+      ],
+      [
+          "IND",
+          "Indiana Pacers",
+          "#F6D200"
+      ],
+      [
+          "MIL",
+          "Milwaukee Bucks",
+          "#103F1A"
+      ],
+      [
+          "ATL",
+          "Atlanta Hawks",
+          "#F6D000"
+      ],
+      [
+          "CHA",
+          "Charlotte Hornets",
+          "#3988BA"
+      ],
+      [
+          "MIA",
+          "Miami Heat",
+          "#B61029"
+      ],
+      [
+          "ORL",
+          "Orlando Magic",
+          "#417FF3"
+      ],
+      [
+          "WAS",
+          "Washington Wizards",
+          "#F01C2A"
+      ],
+      [
+          "DEN",
+          "Denver Nuggets",
+          "#A12034"
+      ],
+      [
+          "MIN",
+          "Minnesota Timberwolves",
+          "#97DA01"
+      ],
+      [
+          "OKC",
+          "Oklahoma City Thunder",
+          "#458AF8"
+      ],
+      [
+          "POR",
+          "Portland Trail Blazers",
+          "#ED3E36"
+      ],
+      [
+          "UTA",
+          "Utah Jazz",
+          "#F9F400"
+      ],
+      [
+          "GSW",
+          "Golden State Warriors",
+          "#262CAD"
+      ],
+      [
+          "LAC",
+          "LA Clippers",
+          "#DF1D29"
+      ],
+      [
+          "LAL",
+          "Los Angeles Lakers",
+          "#F5C800"
+      ],
+      [
+          "PHX",
+          "Phoenix Suns",
+          "#ED651A"
+      ],
+      [
+          "SAC",
+          "Sacramento Kings",
+          "#4C149F"
+      ],
+      [
+          "DAL",
+          "Dallas Mavericks",
+          "#3358D4"
+      ],
+      [
+          "HOU",
+          "Houston Rockets",
+          "#A4B0C8"
+      ],
+      [
+          "MEM",
+          "Memphis Grizzlies",
+          "#7099EB"
+      ],
+      [
+          "NOP",
+          "New Orleans Pelicans",
+          "#C2AE4E"
+      ],
+      [
+          "SAS",
+          "San Antonio Spurs",
+          "#D4E8FE"
+      ]
+  ];
+
+  var LOGO_DIR = "assets/nba/";
+  var EXTS = ["png", "svg", "webp", "jpg", "jpeg"];
+  var STORE_KEY = "breakboard.nba.taken";
+
+  var grid = document.getElementById("grid");
+  var spinBtn = document.getElementById("spin");
+  var resetBtn = document.getElementById("reset");
+  var result = document.getElementById("result");
+  var status = document.getElementById("status");
+
+  var cells = [];
+  var taken = loadTaken();
+  var spinning = false;
+  var timer = null;
+
+  /* ---------- helpers ---------- */
+
+  // Pick black or white text based on how bright the backing color is.
+  function readableOn(hex) {
+    var n = parseInt(hex.slice(1), 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.62 ? "#0b0d11" : "#ffffff";
+  }
+
+  function loadTaken() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.filter(function (i) {
+        return typeof i === "number" && i >= 0 && i < TEAMS.length;
+      }) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveTaken() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(taken)); } catch (e) {}
+  }
+
+  function isTaken(i) { return taken.indexOf(i) !== -1; }
+
+  function remaining() {
+    var out = [];
+    for (var i = 0; i < TEAMS.length; i++) if (!isTaken(i)) out.push(i);
+    return out;
+  }
+
+  // <img> that walks the extension list, then degrades to abbreviation text.
+  function makeLogo(team) {
+    var img = document.createElement("img");
+    var attempt = 0;
+    img.className = "logo";
+    img.alt = "";
+    img.decoding = "async";
+    img.src = LOGO_DIR + team[0].toLowerCase() + "." + EXTS[attempt];
+    img.addEventListener("error", function () {
+      attempt++;
+      if (attempt < EXTS.length) {
+        img.src = LOGO_DIR + team[0].toLowerCase() + "." + EXTS[attempt];
+        return;
+      }
+      var span = document.createElement("span");
+      span.className = "fallback";
+      span.textContent = team[0];
+      if (img.parentNode) img.parentNode.replaceChild(span, img);
+    });
+    return img;
+  }
+
+  /* ---------- build the grid ---------- */
+
+  TEAMS.forEach(function (team, i) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cell";
+    btn.style.setProperty("--c", team[2]);
+    btn.style.setProperty("--fg", readableOn(team[2]));
+    btn.title = team[1];
+    btn.setAttribute("aria-label", team[1]);
+    btn.appendChild(makeLogo(team));
+    btn.addEventListener("click", function () { toggle(i); });
+    grid.appendChild(btn);
+    cells.push(btn);
+  });
+
+  /* ---------- state rendering ---------- */
+
+  function render() {
+    for (var i = 0; i < cells.length; i++) {
+      var t = isTaken(i);
+      cells[i].classList.toggle("taken", t);
+      cells[i].setAttribute("aria-pressed", t ? "true" : "false");
+    }
+
+    var left = remaining().length;
+    spinBtn.disabled = spinning || left === 0;
+    resetBtn.disabled = spinning;
+
+    if (left === 0) {
+      status.textContent = "Board complete — all " + TEAMS.length + " teams taken.";
+    } else {
+      status.textContent = left + " of " + TEAMS.length + " teams remaining";
+    }
+  }
+
+  function clearHighlights() {
+    for (var i = 0; i < cells.length; i++) {
+      cells[i].classList.remove("spinning", "winner");
+    }
+  }
+
+  function showIdle(msg) {
+    result.className = "idle";
+    result.textContent = msg;
+  }
+
+  function showWinner(i, done) {
+    var team = TEAMS[i];
+    result.className = done ? "done" : "";
+    result.textContent = "";
+
+    var swatch = document.createElement("div");
+    swatch.className = "swatch";
+    swatch.style.setProperty("--sc", team[2]);
+    swatch.style.setProperty("--sfg", readableOn(team[2]));
+    swatch.appendChild(makeLogo(team));
+
+    var box = document.createElement("div");
+    var label = document.createElement("div");
+    label.className = "label";
+    label.textContent = done ? "Final team — board complete" : "Winner";
+    var name = document.createElement("div");
+    name.className = "name";
+    name.textContent = team[1];
+    box.appendChild(label);
+    box.appendChild(name);
+
+    result.appendChild(swatch);
+    result.appendChild(box);
+  }
+
+  /* ---------- interactions ---------- */
+
+  function toggle(i) {
+    if (spinning) return;
+    clearHighlights();
+    if (isTaken(i)) {
+      taken.splice(taken.indexOf(i), 1);
+    } else {
+      taken.push(i);
+    }
+    saveTaken();
+    render();
+    if (remaining().length === 0) {
+      showIdle("Board complete — hit Reset to start fresh.");
+    } else {
+      showIdle("Tap teams to cross them off, then hit Spin.");
+    }
+  }
+
+  function spin() {
+    if (spinning) return;
+    var pool = remaining();
+    if (!pool.length) { render(); return; }
+
+    clearHighlights();
+    spinning = true;
+    render();
+    showIdle("Spinning…");
+
+    // Decide the winner up front, then build a tick sequence that ends on it.
+    var winner = pool[Math.floor(Math.random() * pool.length)];
+    var ticks = pool.length === 1 ? 6 : Math.min(34, Math.max(18, pool.length * 2 + 8));
+    var winnerPos = pool.indexOf(winner);
+    var offset = ((winnerPos - (ticks - 1)) % pool.length + pool.length) % pool.length;
+    var step = 0;
+
+    function tick() {
+      clearHighlights();
+      var idx = pool[(offset + step) % pool.length];
+      cells[idx].classList.add("spinning");
+      step++;
+
+      if (step >= ticks) { land(idx); return; }
+
+      // ease out: ~40ms early, ~240ms on the last few passes
+      var p = step / ticks;
+      timer = setTimeout(tick, 40 + Math.pow(p, 3.2) * 200);
+    }
+
+    function land(idx) {
+      timer = null;
+      spinning = false;
+      clearHighlights();
+
+      if (!isTaken(idx)) taken.push(idx);
+      saveTaken();
+      render();
+
+      cells[idx].classList.add("winner");
+      showWinner(idx, remaining().length === 0);
+
+      try {
+        cells[idx].scrollIntoView({ block: "center", behavior: "smooth" });
+      } catch (e) {}
+    }
+
+    tick();
+  }
+
+  function reset() {
+    if (spinning) return;
+    if (timer) { clearTimeout(timer); timer = null; }
+    taken = [];
+    saveTaken();
+    clearHighlights();
+    render();
+    showIdle("Board reset — all " + TEAMS.length + " teams are live.");
+  }
+
+  spinBtn.addEventListener("click", spin);
+  resetBtn.addEventListener("click", reset);
+
+  // Space / Enter with nothing focused spins the board.
+  document.addEventListener("keydown", function (e) {
+    if (e.target !== document.body) return;
+    if (e.code === "Space" || e.code === "Enter") {
+      e.preventDefault();
+      if (!spinBtn.disabled) spin();
+    }
+  });
+
+  render();
+  if (remaining().length === 0) {
+    showIdle("Board complete — hit Reset to start fresh.");
+  } else if (taken.length) {
+    showIdle(taken.length + " team(s) already crossed off. Hit Spin when ready.");
+  }
+})();
+</script>
+</body>
+</html>

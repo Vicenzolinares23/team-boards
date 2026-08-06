@@ -1,0 +1,148 @@
+# Team Break Boards
+
+A local, Whatnot-style random team spinner for live sports card breaks. Two
+standalone boards — NBA (30 teams) and NFL (32 teams) — plus a small landing
+page that links to both.
+
+No build step, no server, no internet connection, no dependencies. Each board
+is a single HTML file with its CSS and JS inline.
+
+## Opening it locally
+
+Double-click **`index.html`** and it opens in your default browser. From there
+tap **NBA** or **NFL**. You can also double-click `nba.html` or `nfl.html`
+directly to skip the landing page.
+
+That's it — the pages run straight off the `file://` protocol, so there's
+nothing to install or start.
+
+### Viewing it on your phone
+
+Since the pages read logos from the local `assets/` folders, the simplest phone
+setup is to copy the whole `team-boards` folder onto the phone (iCloud Drive,
+Google Drive, AirDrop, etc.) and open `index.html` from the Files app. If you'd
+rather serve it from your computer over Wi-Fi, any static server works, for
+example from inside the `team-boards` folder:
+
+```
+python3 -m http.server 8000
+```
+
+then visit `http://<your-computer-ip>:8000` on the phone.
+
+## How the board works
+
+**Tap to cross off.** Every team is a cell in the grid: its logo on the team's
+color. Tapping a cell crosses it off — the cell dims, goes grayscale, and gets a
+red X drawn over it. Crossed-off teams are excluded from every future spin.
+
+**Tapping again un-crosses it.** Handy when you mis-tap mid-break — no need to
+reset the whole board.
+
+**Spin / Reveal.** Rapidly cycles a white highlight through *only* the remaining
+teams like a slot machine, slows down, and lands on one random remaining team.
+The landed cell scales up with a gold glow, scrolls into view, gets crossed off
+automatically, and the winning team's full name appears in large text in the
+panel below the buttons.
+
+**Running count.** Under the result panel you'll always see how many teams are
+left, e.g. `18 of 30 teams remaining`.
+
+**Board Complete.** Once the last team is taken, the Spin button is disabled and
+the board reports that it's complete. The final spin's result panel is labeled
+*"Final team — board complete."*
+
+**Reset.** Clears every crossed-off team and the result, putting all teams back
+in play.
+
+**Keyboard shortcut.** With nothing focused, `Space` or `Enter` triggers a spin.
+
+**Refresh-safe.** Crossed-off teams are saved in the browser's `localStorage`
+per board, so an accidental refresh or a phone locking mid-break won't lose your
+progress. Reset clears the saved state too. The two boards are stored
+separately, so an NBA break and an NFL break don't interfere with each other.
+
+## What's in the assets folders
+
+```
+assets/
+  nba/    30 team tiles + the original poster screenshot
+  nfl/    32 team tiles + the original poster screenshot
+```
+
+The logos came from two poster screenshots — a 5×6 grid of the NBA logos and a
+4×8 grid of the NFL logos, each team on its own colored tile. Those posters were
+sliced into one image per team, so the board can show, dim, and cross off each
+team independently.
+
+Each board looks for one image per team, named with the team's **lowercase
+abbreviation**, read relative to the HTML file:
+
+- `nba.html` → `assets/nba/lal.png`, `assets/nba/bos.png`, …
+- `nfl.html` → `assets/nfl/kc.png`, `assets/nfl/sf.png`, …
+
+`.png` is tried first, then `.svg`, `.webp`, `.jpg`, `.jpeg` — so you can swap in
+better artwork later just by dropping a file with the same base name into the
+folder. Each tile fills its cell edge to edge, so images that already include the
+team's background color (like these) look best; a transparent logo would show the
+cell's own background color behind it instead.
+
+If a logo file is missing, that cell falls back to showing the team's
+abbreviation in large text on the team's color. Everything else — the
+tap-to-cross-off, the spinner — keeps working.
+
+The two original screenshots (`Screenshot 2026-08-06 *.png`) are still in the
+folders as the source artwork. Nothing references them at runtime, so you can
+delete them if you want to slim the folder down.
+
+### Expected filenames
+
+**`assets/nba/`** (30)
+
+```
+atl  bos  bkn  cha  chi  cle  dal  den  det  gsw
+hou  ind  lac  lal  mem  mia  mil  min  nop  nyk
+okc  orl  phi  phx  por  sac  sas  tor  uta  was
+```
+
+**`assets/nfl/`** (32)
+
+```
+ari  atl  bal  buf  car  chi  cin  cle  dal  den
+det  gb   hou  ind  jax  kc   lv   lac  lar  mia
+min  ne   no   nyg  nyj  phi  pit  sf   sea  tb
+ten  was
+```
+
+### Changing a team's color, name, or order
+
+Team data lives in one array near the top of the `<script>` block in each file,
+as `[abbreviation, full name, background color]`:
+
+```js
+var TEAMS = [
+    ["BOS", "Boston Celtics", "#2B863E"],
+    ...
+];
+```
+
+Teams are listed in division order, matching the posters — Atlantic, Central,
+Southeast, … for the NBA; AFC East through NFC West for the NFL. Reorder that
+array to rearrange the board.
+
+The colors were sampled from each poster tile so the cell blends with its
+artwork; they're used for the fallback and the winner panel. The logo filename is
+derived from the abbreviation, and text automatically switches between white and
+near-black depending on how bright the color is.
+
+## Files
+
+| File | What it is |
+| --- | --- |
+| `index.html` | Landing page linking to both boards |
+| `nba.html` | NBA board — standalone, 30 teams, 5 columns |
+| `nfl.html` | NFL board — standalone, 32 teams, 4 columns |
+| `assets/nba/`, `assets/nfl/` | Team logo images |
+
+Both boards fit on a single phone screen with the Spin and Reset buttons in
+reach — no scrolling mid-break.
