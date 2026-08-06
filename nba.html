@@ -227,7 +227,13 @@
      cell falls back to the abbreviation on the color below.
   ------------------------------------------------------------------ */
 
+  /* Order matters: the landscape grid is 10 wide x 3 tall, so entries 11-20
+     are the middle row. The headline teams live there, with Dallas and
+     San Antonio in the two dead-center slots. In portrait (5 x 6) the same
+     ten entries land on the two middle rows. */
+
   var TEAMS = [
+      /* ---- top row ---- */
       [
           "BOS",
           "Boston Celtics",
@@ -242,11 +248,6 @@
           "NYK",
           "New York Knicks",
           "#F39310"
-      ],
-      [
-          "PHI",
-          "Philadelphia 76ers",
-          "#C7201D"
       ],
       [
           "TOR",
@@ -283,15 +284,47 @@
           "Atlanta Hawks",
           "#F6D000"
       ],
+
+      /* ---- middle row ---- */
+      [
+          "MIA",
+          "Miami Heat",
+          "#B61029"
+      ],
+      [
+          "PHI",
+          "Philadelphia 76ers",
+          "#C7201D"
+      ],
       [
           "CHA",
           "Charlotte Hornets",
           "#3988BA"
       ],
       [
-          "MIA",
-          "Miami Heat",
-          "#B61029"
+          "GSW",
+          "Golden State Warriors",
+          "#262CAD"
+      ],
+      [
+          "DAL",
+          "Dallas Mavericks",
+          "#3358D4"
+      ],
+      [
+          "SAS",
+          "San Antonio Spurs",
+          "#D4E8FE"
+      ],
+      [
+          "OKC",
+          "Oklahoma City Thunder",
+          "#458AF8"
+      ],
+      [
+          "LAL",
+          "Los Angeles Lakers",
+          "#F5C800"
       ],
       [
           "ORL",
@@ -303,6 +336,8 @@
           "Washington Wizards",
           "#F01C2A"
       ],
+
+      /* ---- bottom row ---- */
       [
           "DEN",
           "Denver Nuggets",
@@ -312,11 +347,6 @@
           "MIN",
           "Minnesota Timberwolves",
           "#97DA01"
-      ],
-      [
-          "OKC",
-          "Oklahoma City Thunder",
-          "#458AF8"
       ],
       [
           "POR",
@@ -329,19 +359,9 @@
           "#F9F400"
       ],
       [
-          "GSW",
-          "Golden State Warriors",
-          "#262CAD"
-      ],
-      [
           "LAC",
           "LA Clippers",
           "#DF1D29"
-      ],
-      [
-          "LAL",
-          "Los Angeles Lakers",
-          "#F5C800"
       ],
       [
           "PHX",
@@ -352,11 +372,6 @@
           "SAC",
           "Sacramento Kings",
           "#4C149F"
-      ],
-      [
-          "DAL",
-          "Dallas Mavericks",
-          "#3358D4"
       ],
       [
           "HOU",
@@ -372,17 +387,15 @@
           "NOP",
           "New Orleans Pelicans",
           "#C2AE4E"
-      ],
-      [
-          "SAS",
-          "San Antonio Spurs",
-          "#D4E8FE"
       ]
   ];
 
   var LOGO_DIR = "assets/nba/";
   var EXTS = ["png", "svg", "webp", "jpg", "jpeg"];
-  var STORE_KEY = "breakboard.nba.taken";
+  // Saved marks are stored by index, so the key is versioned: reordering
+  // TEAMS bumps it and drops stale state instead of crossing off the
+  // wrong teams.
+  var STORE_KEY = "breakboard.nba.taken.v2";
 
   var grid = document.getElementById("grid");
   var resetBtn = document.getElementById("reset");
