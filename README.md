@@ -1,7 +1,7 @@
 # Team Break Boards
 
-A local, Whatnot-style random team spinner for live sports card breaks. Two
-standalone boards — NBA (30 teams) and NFL (32 teams) — plus a small landing
+A local, Whatnot-style tap-to-cross-off team board for live sports card breaks.
+Two standalone boards — NBA (30 teams) and NFL (32 teams) — plus a small landing
 page that links to both.
 
 No build step, no server, no internet connection, no dependencies. Each board
@@ -34,28 +34,23 @@ then visit `http://<your-computer-ip>:8000` on the phone.
 
 **Tap to cross off.** Every team is a cell in the grid: its logo on the team's
 color. Tapping a cell crosses it off — the cell dims, goes grayscale, and gets a
-red X drawn over it. Crossed-off teams are excluded from every future spin.
+red X drawn over it.
 
 **Tapping again un-crosses it.** Handy when you mis-tap mid-break — no need to
 reset the whole board.
 
-**Spin / Reveal.** Rapidly cycles a white highlight through *only* the remaining
-teams like a slot machine, slows down, and lands on one random remaining team.
-The landed cell scales up with a gold glow, scrolls into view, gets crossed off
-automatically, and the winning team's full name appears in large text in the
-panel below the buttons.
+**Fills the screen.** The grid stretches edge to edge across the full viewport in
+a wide, landscape arrangement — NBA 10 columns × 3 rows, NFL 8 columns × 4 rows —
+so the entire board is visible at once with no scrolling. Cells scale with the
+window, so it works on a phone held sideways and on a desktop monitor alike. Turn
+the phone upright and the grid switches to a portrait arrangement (NBA 5 × 6,
+NFL 4 × 8) that still fits the screen without scrolling.
 
-**Running count.** Under the result panel you'll always see how many teams are
-left, e.g. `18 of 30 teams remaining`.
+**Running count.** The top bar shows how many teams are left, e.g. `18 of 30
+left`, and switches to *"Board complete — all 30 teams taken"* once the last one
+is crossed off.
 
-**Board Complete.** Once the last team is taken, the Spin button is disabled and
-the board reports that it's complete. The final spin's result panel is labeled
-*"Final team — board complete."*
-
-**Reset.** Clears every crossed-off team and the result, putting all teams back
-in play.
-
-**Keyboard shortcut.** With nothing focused, `Space` or `Enter` triggers a spin.
+**Reset.** Clears every crossed-off team, putting all teams back in play.
 
 **Refresh-safe.** Crossed-off teams are saved in the browser's `localStorage`
 per board, so an accidental refresh or a phone locking mid-break won't lose your
@@ -83,13 +78,14 @@ abbreviation**, read relative to the HTML file:
 
 `.png` is tried first, then `.svg`, `.webp`, `.jpg`, `.jpeg` — so you can swap in
 better artwork later just by dropping a file with the same base name into the
-folder. Each tile fills its cell edge to edge, so images that already include the
-team's background color (like these) look best; a transparent logo would show the
-cell's own background color behind it instead.
+folder. Each tile is scaled to fit its cell without cropping, and the cell's
+background is set to the tile's own color, so images that already include the
+team's background color (like these) blend in seamlessly; a transparent logo
+would simply show the cell color behind it.
 
 If a logo file is missing, that cell falls back to showing the team's
-abbreviation in large text on the team's color. Everything else — the
-tap-to-cross-off, the spinner — keeps working.
+abbreviation in large text on the team's color, and tap-to-cross-off keeps
+working as normal.
 
 The two original screenshots (`Screenshot 2026-08-06 *.png`) are still in the
 folders as the source artwork. Nothing references them at runtime, so you can
@@ -131,18 +127,34 @@ Southeast, … for the NBA; AFC East through NFC West for the NFL. Reorder that
 array to rearrange the board.
 
 The colors were sampled from each poster tile so the cell blends with its
-artwork; they're used for the fallback and the winner panel. The logo filename is
-derived from the abbreviation, and text automatically switches between white and
-near-black depending on how bright the color is.
+artwork. The logo filename is derived from the abbreviation, and text
+automatically switches between white and near-black depending on how bright the
+color is.
+
+### Changing the grid shape
+
+The column and row counts are set in the CSS at the top of each file — `#grid`
+for the wide landscape layout, and the `@media (orientation: portrait)` block
+just below it for the upright one:
+
+```css
+#grid {
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+```
+
+Any pair whose product is at least the team count works; the cells resize
+themselves to fill the screen.
 
 ## Files
 
 | File | What it is |
 | --- | --- |
 | `index.html` | Landing page linking to both boards |
-| `nba.html` | NBA board — standalone, 30 teams, 5 columns |
-| `nfl.html` | NFL board — standalone, 32 teams, 4 columns |
+| `nba.html` | NBA board — standalone, 30 teams, 10 × 3 landscape |
+| `nfl.html` | NFL board — standalone, 32 teams, 8 × 4 landscape |
 | `assets/nba/`, `assets/nfl/` | Team logo images |
 
-Both boards fit on a single phone screen with the Spin and Reset buttons in
-reach — no scrolling mid-break.
+Both boards fill the whole screen with the Reset button in reach — no scrolling
+mid-break.
