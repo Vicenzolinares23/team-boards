@@ -30,6 +30,10 @@ await app.register(staticPlugin, {
   prefix: "/",
   wildcard: false,
 });
+await app.register(staticPlugin, {
+  root: path.resolve(__dirname, "../../assets"),
+  prefix: "/assets/",
+});
 
 app.get("/api/health", async () => {
   const dbOk = await pool

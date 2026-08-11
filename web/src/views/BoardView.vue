@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { api } from "../api";
 import { RealtimeClient } from "../realtime";
+import { localLogoUrl } from "../logo";
 import RosterModal from "../components/RosterModal.vue";
 import type { Board, EspnTeam } from "../types";
 
@@ -16,6 +17,19 @@ const presence = ref(0);
 const conn = ref<RealtimeClient["status"]>("connecting");
 
 const selectedTeam = ref<EspnTeam | null>(null);
+
+function onLogoError(e: Event, team: EspnTeam) {
+  const img = e.target as HTMLImageElement;
+  const local = board.value ? localLogoUrl(board.value.sport, team) : null;
+  if (local) {
+    img.src = local;
+    img.onerror = () => {
+      img.style.display = "none";
+    };
+  } else {
+    img.style.display = "none";
+  }
+}
 
 let realtime: RealtimeClient | null = null;
 
@@ -159,8 +173,8 @@ onUnmounted(() => {
         :aria-pressed="isTaken(team)"
         @click="toggle(team)"
       >
-        <img v-if="team.logo" class="logo" :src="team.logo" :alt="''" loading="lazy" @error="($event.target as HTMLImageElement).style.display = 'none'" />
-        <span v-else class="fallback" :style="{ color: readableOn(team.color) }">{{ team.abbreviation }}</span>
+        <span class="abbr" :style="{ color: readableOn(team.color) }">{{ team.abbreviation }}</span>
+        <img class="logo" :src="team.logo ?? localLogoUrl(board!.sport, team) ?? ''" :alt="''" loading="lazy" @error="onLogoError($event, team)" />
         <span class="info" @click.stop="selectedTeam = team" title="View roster">i</span>
       </button>
     </main>
@@ -277,8 +291,8 @@ h1 { margin: 0; font-size: .95rem; font-weight: 800; letter-spacing: .05em; text
 }
 .cell:active { transform: scale(.94); }
 
-.cell .logo { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
-.cell .fallback { font-size: clamp(.7rem, 2.2vw, 1.3rem); font-weight: 800; pointer-events: none; }
+.cell .logo { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; position: absolute; inset: 0; }
+.cell .abbr { font-size: clamp(.7rem, 2.2vw, 1.3rem); font-weight: 800; pointer-events: none; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 
 .cell .info {
   position: absolute;
