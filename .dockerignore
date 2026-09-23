@@ -1,7 +1,0 @@
-node_modules
-server/dist
-web/dist
-.git
-.coachbak
-*.log
-.DS_Store

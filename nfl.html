@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d11">
+<!-- Launched from the iOS/Android home screen these drop the browser chrome,
+     which is the only true full screen iPhone Safari offers. -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>NFL Break Board</title>
+<style>
+  :root {
+    --bg: #0b0d11;
+    --line: #262b34;
+    --text: #f2f5f8;
+    --muted: #8b95a5;
+    --accent: #4ec9a8;
+    --x: #ff3546;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ---------- top bar (kept short so the grid gets the screen) ---------- */
+
+  .bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    padding-top: calc(6px + env(safe-area-inset-top));
+  }
+
+  h1 {
+    margin: 0;
+    font-size: .95rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  h1 .sport { color: var(--accent); }
+
+  .count {
+    flex: 1 1 auto;
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--muted);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .count.complete { color: var(--accent); }
+
+  .btn {
+    flex: 0 0 auto;
+    appearance: none;
+    border: 2px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: color .15s ease, border-color .15s ease, transform .1s ease;
+  }
+
+  .btn:hover { color: var(--text); border-color: #3b424e; }
+  .btn:active { transform: scale(.95); }
+  .btn[hidden] { display: none; }
+
+  .home {
+    flex: 0 0 auto;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: .76rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .home:hover { color: var(--text); }
+
+  /* ---------- grid: fills every remaining pixel ---------- */
+
+  #grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 4px;
+    padding: 0 5px 5px;
+  }
+
+  /* Taller than wide (phone held upright): flip to a portrait arrangement so
+     the whole board still fits without scrolling. */
+  @media (orientation: portrait) {
+    #grid {
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+    }
+  }
+
+  .cell {
+    position: relative;
+    appearance: none;
+    -webkit-appearance: none;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    border: 2px solid rgba(255,255,255,.12);
+    border-radius: 9px;
+    padding: 0;
+    background: var(--c);
+    color: var(--fg);
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    transition: transform .16s ease, opacity .18s ease,
+                border-color .18s ease, filter .18s ease;
+  }
+
+  .cell:active { transform: scale(.94); }
+
+  /* contain, not cover: cell proportions shift with the viewport and no logo
+     should ever get clipped. The cell color matches the tile, so any letterbox
+     blends into the artwork. */
+  .cell .logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+  }
+
+  /* shown only when a logo file is missing */
+  .cell .fallback {
+    font-size: clamp(.7rem, 2.2vw, 1.3rem);
+    font-weight: 800;
+    pointer-events: none;
+  }
+
+  /* ---------- crossed off: dim + red X ---------- */
+
+  .cell.taken {
+    opacity: .28;
+    filter: grayscale(.85);
+    border-color: rgba(255,255,255,.06);
+  }
+
+  .cell.taken::before,
+  .cell.taken::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 150%;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--x);
+    box-shadow: 0 0 8px rgba(255,53,70,.75);
+  }
+
+  .cell.taken::before { transform: translate(-50%, -50%) rotate(42deg); }
+  .cell.taken::after  { transform: translate(-50%, -50%) rotate(-42deg); }
+
+  @media (min-width: 700px) {
+    .bar { padding: 9px 14px; }
+    h1 { font-size: 1.1rem; }
+    .count { font-size: .8rem; }
+    #grid { gap: 6px; padding: 0 8px 8px; }
+    .cell { border-radius: 12px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cell, .btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h1><span class="sport">NFL</span> Board</h1>
+  <div class="count" id="count"></div>
+  <button id="fs" class="btn" type="button">Full Screen</button>
+  <button id="reset" class="btn" type="button">Reset</button>
+  <a class="home" href="index.html">&larr; Boards</a>
+</div>
+
+<div id="grid" role="group" aria-label="NFL teams"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ------------------------------------------------------------------
+     Team data: [abbreviation, full name, tile background color]
+     Logos live at assets/nfl/<lowercase abbr>.png, read relative
+     to this file. EXTS is tried in order, so swapping in .svg/.webp
+     artwork works without touching this list. If no file is found the
+     cell falls back to the abbreviation on the color below.
+  ------------------------------------------------------------------ */
+
+  var TEAMS = [
+      [
+          "BUF",
+          "Buffalo Bills",
+          "#2B4BA4"
+      ],
+      [
+          "MIA",
+          "Miami Dolphins",
+          "#3FA0AC"
+      ],
+      [
+          "NE",
+          "New England Patriots",
+          "#1A2574"
+      ],
+      [
+          "NYJ",
+          "New York Jets",
+          "#1C5832"
+      ],
+      [
+          "BAL",
+          "Baltimore Ravens",
+          "#261189"
+      ],
+      [
+          "CIN",
+          "Cincinnati Bengals",
+          "#F1581F"
+      ],
+      [
+          "CLE",
+          "Cleveland Browns",
+          "#F14E2A"
+      ],
+      [
+          "PIT",
+          "Pittsburgh Steelers",
+          "#F5CE00"
+      ],
+      [
+          "HOU",
+          "Houston Texans",
+          "#F04334"
+      ],
+      [
+          "IND",
+          "Indianapolis Colts",
+          "#213297"
+      ],
+      [
+          "JAX",
+          "Jacksonville Jaguars",
+          "#419EC3"
+      ],
+      [
+          "TEN",
+          "Tennessee Titans",
+          "#5AA4FE"
+      ],
+      [
+          "DEN",
+          "Denver Broncos",
+          "#B6401F"
+      ],
+      [
+          "KC",
+          "Kansas City Chiefs",
+          "#EB342C"
+      ],
+      [
+          "LV",
+          "Las Vegas Raiders",
+          "#D0DBEB"
+      ],
+      [
+          "LAC",
+          "Los Angeles Chargers",
+          "#4695F3"
+      ],
+      [
+          "DAL",
+          "Dallas Cowboys",
+          "#213380"
+      ],
+      [
+          "NYG",
+          "New York Giants",
+          "#2937A1"
+      ],
+      [
+          "PHI",
+          "Philadelphia Eagles",
+          "#16404C"
+      ],
+      [
+          "WAS",
+          "Washington Commanders",
+          "#380110"
+      ],
+      [
+          "CHI",
+          "Chicago Bears",
+          "#F17135"
+      ],
+      [
+          "DET",
+          "Detroit Lions",
+          "#4394E0"
+      ],
+      [
+          "GB",
+          "Green Bay Packers",
+          "#213F2C"
+      ],
+      [
+          "MIN",
+          "Minnesota Vikings",
+          "#4D12AC"
+      ],
+      [
+          "ATL",
+          "Atlanta Falcons",
+          "#E03435"
+      ],
+      [
+          "CAR",
+          "Carolina Panthers",
+          "#4EB0F7"
+      ],
+      [
+          "NO",
+          "New Orleans Saints",
+          "#E6DCAB"
+      ],
+      [
+          "TB",
+          "Tampa Bay Buccaneers",
+          "#D21420"
+      ],
+      [
+          "ARI",
+          "Arizona Cardinals",
+          "#CA2833"
+      ],
+      [
+          "LAR",
+          "Los Angeles Rams",
+          "#F3B700"
+      ],
+      [
+          "SF",
+          "San Francisco 49ers",
+          "#D61C32"
+      ],
+      [
+          "SEA",
+          "Seattle Seahawks",
+          "#1A2780"
+      ]
+  ];
+
+  var LOGO_DIR = "assets/nfl/";
+  var EXTS = ["png", "svg", "webp", "jpg", "jpeg"];
+  var STORE_KEY = "breakboard.nfl.taken";
+
+  var grid = document.getElementById("grid");
+  var resetBtn = document.getElementById("reset");
+  var fsBtn = document.getElementById("fs");
+  var count = document.getElementById("count");
+
+  var cells = [];
+  var taken = loadTaken();
+
+  /* ---------- helpers ---------- */
+
+  // Pick black or white text based on how bright the backing color is.
+  function readableOn(hex) {
+    var n = parseInt(hex.slice(1), 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.62 ? "#0b0d11" : "#ffffff";
+  }
+
+  function loadTaken() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.filter(function (i) {
+        return typeof i === "number" && i >= 0 && i < TEAMS.length;
+      }) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveTaken() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(taken)); } catch (e) {}
+  }
+
+  function isTaken(i) { return taken.indexOf(i) !== -1; }
+
+  function remainingCount() {
+    var n = 0;
+    for (var i = 0; i < TEAMS.length; i++) if (!isTaken(i)) n++;
+    return n;
+  }
+
+  // <img> that walks the extension list, then degrades to abbreviation text.
+  function makeLogo(team) {
+    var img = document.createElement("img");
+    var attempt = 0;
+    img.className = "logo";
+    img.alt = "";
+    img.decoding = "async";
+    img.src = LOGO_DIR + team[0].toLowerCase() + "." + EXTS[attempt];
+    img.addEventListener("error", function () {
+      attempt++;
+      if (attempt < EXTS.length) {
+        img.src = LOGO_DIR + team[0].toLowerCase() + "." + EXTS[attempt];
+        return;
+      }
+      var span = document.createElement("span");
+      span.className = "fallback";
+      span.textContent = team[0];
+      if (img.parentNode) img.parentNode.replaceChild(span, img);
+    });
+    return img;
+  }
+
+  /* ---------- build the grid ---------- */
+
+  TEAMS.forEach(function (team, i) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cell";
+    btn.style.setProperty("--c", team[2]);
+    btn.style.setProperty("--fg", readableOn(team[2]));
+    btn.title = team[1];
+    btn.setAttribute("aria-label", team[1]);
+    btn.appendChild(makeLogo(team));
+    btn.addEventListener("click", function () { toggle(i); });
+    grid.appendChild(btn);
+    cells.push(btn);
+  });
+
+  /* ---------- state ---------- */
+
+  function render() {
+    for (var i = 0; i < cells.length; i++) {
+      var t = isTaken(i);
+      cells[i].classList.toggle("taken", t);
+      cells[i].setAttribute("aria-pressed", t ? "true" : "false");
+    }
+
+    var left = remainingCount();
+    count.classList.toggle("complete", left === 0);
+    count.textContent = left === 0
+      ? "Board complete — all " + TEAMS.length + " teams taken"
+      : left + " of " + TEAMS.length + " left";
+  }
+
+  function toggle(i) {
+    if (isTaken(i)) {
+      taken.splice(taken.indexOf(i), 1);
+    } else {
+      taken.push(i);
+    }
+    saveTaken();
+    render();
+  }
+
+  function reset() {
+    taken = [];
+    saveTaken();
+    render();
+  }
+
+  resetBtn.addEventListener("click", reset);
+
+  /* ---------- full screen ---------- */
+
+  // Safari (desktop and iPad) still only ships the webkit-prefixed calls.
+  var docEl = document.documentElement;
+  var enter = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+  var leave = document.exitFullscreen || document.webkitExitFullscreen;
+
+  function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  function syncFsBtn() {
+    fsBtn.textContent = isFullscreen() ? "Exit" : "Full Screen";
+  }
+
+  if (!enter) {
+    // iPhone Safari has no Fullscreen API; Add to Home Screen is the way there.
+    fsBtn.hidden = true;
+  } else {
+    fsBtn.addEventListener("click", function () {
+      // Both calls return a promise that rejects if the browser refuses the
+      // gesture; there is nothing to recover, just don't log a stray error.
+      var p = isFullscreen()
+        ? (leave && leave.call(document))
+        : enter.call(docEl);
+      if (p && p.catch) p.catch(function () {});
+    });
+
+    // Covers Esc and F11 too, so the label never lies about the current state.
+    document.addEventListener("fullscreenchange", syncFsBtn);
+    document.addEventListener("webkitfullscreenchange", syncFsBtn);
+    syncFsBtn();
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

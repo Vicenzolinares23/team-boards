@@ -1,120 +1,178 @@
-# Team Boards
+# Team Break Boards
 
-A real-time, tap-to-cross-off team board for live sports card breaks.
+A local, Whatnot-style tap-to-cross-off team board for live sports card breaks.
+Three standalone boards — NBA (30 teams), NFL (32 teams) and MLB (30 teams) —
+plus a small landing page that links to all of them.
 
-## What's new in 2.0
+No build step, no server, no internet connection, no dependencies. Each board
+is a single HTML file with its CSS and JS inline.
 
-The original boards were single HTML files with browser-local storage. This is
-a full rewrite — a real backend with durable storage, live team data, and
-real-time sync so everyone on a break watches the same board update together.
+## Opening it locally
 
-- **Live team data** — NBA, NFL and MLB teams, logos, and current rosters are pulled
-  from ESPN's public API in real time (cached in Redis). No hardcoded lists.
-- **Real-time sync** — WebSockets keep every connected viewer in lockstep. Tap
-  a team on your phone and it crosses off on every screen watching the board.
-- **Presence** — the header shows how many people are currently viewing the
-  break, live.
-- **Live rosters** — tap the `i` on any team to see its current ESPN roster
-  (sortable by position or A–Z).
-- **Durable storage** — boards live in PostgreSQL (Dockerized); nothing depends
-  on a single browser's localStorage.
-- **Break codes** — each break gets a short ID. Share the link, anyone joins.
+Double-click **`index.html`** and it opens in your default browser. From there
+tap **NBA**, **NFL** or **MLB**. You can also double-click `nba.html`, `nfl.html`
+or `mlb.html` directly to skip the landing page.
 
-## Stack
+That's it — the pages run straight off the `file://` protocol, so there's
+nothing to install or start.
 
-| Layer | Tech |
-|-------|------|
-| Frontend | Vue 3 + Vite + TypeScript |
-| Backend | Node.js + Fastify + WebSocket + TypeScript |
-| Storage | PostgreSQL 16 |
-| Cache / pub-sub | Redis 7 |
-| Deploy | Docker Compose |
+### Viewing it on your phone
 
-## Architecture
+Since the pages read logos from the local `assets/` folders, the simplest phone
+setup is to copy the whole `team-boards` folder onto the phone (iCloud Drive,
+Google Drive, AirDrop, etc.) and open `index.html` from the Files app. If you'd
+rather serve it from your computer over Wi-Fi, any static server works, for
+example from inside the `team-boards` folder:
 
 ```
-┌──────────────┐     REST + WS reroute      ┌─────────────────────────┐
-│  Vue 3 web   │ ─────────────────────────▶ │  Fastify server         │
-│  (web/dist)  │ ◀───────────────────────── │  • /api/teams (ESPN)    │
-└──────────────┘                            │  • /api/boards (CRUD)    │
-         ▲                                  │  • /ws/:boardId (sync)  │
-         │ WebSocket (board + presence)     └───────┬─────────┬───────┘
-                                                   │         │
-                                          ┌────────▼──┐  ┌──▼──────────┐
-                                          │ PostgreSQL │  │   Redis     │
-                                          │ boards     │  │ cache+pubsub│
-                                          └────────────┘  └─────────────┘
+python3 -m http.server 8000
 ```
 
-- **PostgreSQL** is the source of truth for board state.
-- **Redis** caches ESPN team/roster responses and carries the pub/sub channel
-  that fans board updates out to every connected WebSocket.
-- Multiple server instances can be run behind a load balancer — Redis pub/sub
-  keeps them all in sync.
+then visit `http://<your-computer-ip>:8000` on the phone.
 
-## Running it (Docker)
+## How the board works
 
-```bash
-cp .env.example .env   # defaults match compose
-docker compose up --build
+**Tap to cross off.** Every team is a cell in the grid: its logo on the team's
+color. Tapping a cell crosses it off — the cell dims, goes grayscale, and gets a
+red X drawn over it.
+
+**Tapping again un-crosses it.** Handy when you mis-tap mid-break — no need to
+reset the whole board.
+
+**Fills the screen.** The grid stretches edge to edge across the full viewport in
+a wide, landscape arrangement — NBA and MLB 10 columns × 3 rows, NFL 8 columns × 4 rows —
+so the entire board is visible at once with no scrolling. Cells scale with the
+window, so it works on a phone held sideways and on a desktop monitor alike. Turn
+the phone upright and the grid switches to a portrait arrangement (NBA and MLB
+5 × 6, NFL 4 × 8) that still fits the screen without scrolling.
+
+**Running count.** The top bar shows how many teams are left, e.g. `18 of 30
+left`, and switches to *"Board complete — all 30 teams taken"* once the last one
+is crossed off.
+
+**Reset.** Clears every crossed-off team, putting all teams back in play.
+
+**Refresh-safe.** Crossed-off teams are saved in the browser's `localStorage`
+per board, so an accidental refresh or a phone locking mid-break won't lose your
+progress. Reset clears the saved state too. Each board is stored
+separately, so an NBA break and an NFL break don't interfere with each other.
+
+## What's in the assets folders
+
+```
+assets/
+  nba/    30 team tiles + the original poster screenshot
+  nfl/    32 team tiles + the original poster screenshot
+  mlb/    30 team patch cutouts + the original patch photo
 ```
 
-Open http://localhost:3000. Compose starts Postgres, Redis, and the app
-(built Vue frontend served by the Fastify server).
+The logos came from two poster screenshots — a 5×6 grid of the NBA logos and a
+4×8 grid of the NFL logos, each team on its own colored tile. Those posters were
+sliced into one image per team, so the board can show, dim, and cross off each
+team independently.
 
-- App: http://localhost:3000
-- Health check: http://localhost:3000/api/health
-- Postgres: localhost:5432 (`team` / `team`, database `team_boards`)
-- Redis: localhost:6379
+Each board looks for one image per team, named with the team's **lowercase
+abbreviation**, read relative to the HTML file:
 
-## Running it locally (dev)
+- `nba.html` → `assets/nba/lal.png`, `assets/nba/bos.png`, …
+- `nfl.html` → `assets/nfl/kc.png`, `assets/nfl/sf.png`, …
+- `mlb.html` → `assets/mlb/nyy.png`, `assets/mlb/lad.png`, …
 
-Requires Node 20+, a Postgres, and a Redis.
+`.png` is tried first, then `.svg`, `.webp`, `.jpg`, `.jpeg` — so you can swap in
+better artwork later just by dropping a file with the same base name into the
+folder. Each tile is scaled to fit its cell without cropping, and the cell's
+background is set to the tile's own color, so images that already include the
+team's background color (like these) blend in seamlessly; a transparent logo
+would simply show the cell color behind it.
 
-```bash
-npm install
-docker compose up -d db redis          # or point DATABASE_URL/REDIS_URL at existing ones
-npm run dev                            # server :3000 + Vite :5173 together
+If a logo file is missing, that cell falls back to showing the team's
+abbreviation in large text on the team's color, and tap-to-cross-off keeps
+working as normal.
+
+The MLB logos came from a photo of 30 embroidered team patches laid out on a
+countertop. Each patch was cut out along its edge into a transparent PNG, so the
+cell's team color shows around it instead of the countertop.
+
+The original screenshots and photo (`Screenshot *.png`) are still in the
+folders as the source artwork. Nothing references them at runtime, so you can
+delete them if you want to slim the folder down.
+
+### Expected filenames
+
+**`assets/nba/`** (30)
+
+```
+atl  bos  bkn  cha  chi  cle  dal  den  det  gsw
+hou  ind  lac  lal  mem  mia  mil  min  nop  nyk
+okc  orl  phi  phx  por  sac  sas  tor  uta  was
 ```
 
-For a using your own Postgres/Redis:
+**`assets/nfl/`** (32)
 
-```bash
-export DATABASE_URL=postgres://user:pass@localhost:5432/team_boards
-export REDIS_URL=redis://localhost:6379
-npm run dev
+```
+ari  atl  bal  buf  car  chi  cin  cle  dal  den
+det  gb   hou  ind  jax  kc   lv   lac  lar  mia
+min  ne   no   nyg  nyj  phi  pit  sf   sea  tb
+ten  was
 ```
 
-## API
+**`assets/mlb/`** (30)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/health` | Postgres + Redis status |
-| GET | `/api/teams/:sport` | Live teams from ESPN (`nba` / `nfl` / `mlb`) |
-| GET | `/api/teams/:sport/:teamId/roster` | Live roster for a team |
-| POST | `/api/boards` | Create a board `{ sport, name? }` |
-| GET | `/api/boards` | Recent boards |
-| GET | `/api/boards/:id` | Board state |
-| POST | `/api/boards/:id/toggle` | Cross off / un-cross a team `{ teamId }` |
-| POST | `/api/boards/:id/reset` | Clear the board |
-| WS | `/ws/:boardId` | Realtime board + presence stream |
+```
+ari  ath  atl  bal  bos  chc  cin  cle  col  cws
+det  hou  kc   laa  lad  mia  mil  min  nym  nyy
+phi  pit  sd   sea  sf   stl  tb   tex  tor  wsh
+```
 
-## How a break works
+### Changing a team's color, name, or order
 
-1. Open the app, pick **NBA**, **NFL** or **MLB**, name the break, hit create.
-2. Share the link (a short break code like `#/board/a1b2c3d4`).
-3. Everyone viewing the board sees it live. Tap a team to cross it off —
-   the cell dims, grays out, and gets a red X. Tap again to undo.
-4. Tap a team's `i` badge to open its current roster from ESPN.
+Team data lives in one array near the top of the `<script>` block in each file,
+as `[abbreviation, full name, background color]`:
 
-The header counts teams remaining and flips to a "Board complete" banner when
-every team is crossed off.
+```js
+var TEAMS = [
+    ["BOS", "Boston Celtics", "#2B863E"],
+    ...
+];
+```
 
-## MLB board
+Teams are listed in division order — Atlantic, Central, Southeast, … for the
+NBA; AFC East through NFC West for the NFL; AL East through NL West for the MLB,
+two divisions per row, except that the Pirates, Dodgers, Cardinals and Royals
+are swapped into the center of the MLB board. Reorder that array to rearrange
+the board.
 
-The MLB board uses embroidered patch artwork instead of ESPN's logos: each
-patch was cut out of a photo into a transparent PNG in `assets/mlb/`
-(ESPN's logo is the fallback if a patch is missing). The layout lives in
-`web/src/mlb.ts`: a fixed team order — division order, two divisions per row
-of the 10 × 3 grid, with the Pirates, Dodgers, Cardinals and Royals in the
-center — and a cell color per team picked to contrast with its patch.
+The NBA and NFL colors were sampled from each poster tile so the cell blends
+with its artwork; the MLB colors are team colors picked to contrast with each
+patch. The logo filename is derived from the abbreviation, and text
+automatically switches between white and near-black depending on how bright the
+color is.
+
+### Changing the grid shape
+
+The column and row counts are set in the CSS at the top of each file — `#grid`
+for the wide landscape layout, and the `@media (orientation: portrait)` block
+just below it for the upright one:
+
+```css
+#grid {
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+```
+
+Any pair whose product is at least the team count works; the cells resize
+themselves to fill the screen.
+
+## Files
+
+| File | What it is |
+| --- | --- |
+| `index.html` | Landing page linking to every board |
+| `nba.html` | NBA board — standalone, 30 teams, 10 × 3 landscape |
+| `nfl.html` | NFL board — standalone, 32 teams, 8 × 4 landscape |
+| `mlb.html` | MLB board — standalone, 30 teams, 10 × 3 landscape |
+| `assets/nba/`, `assets/nfl/`, `assets/mlb/` | Team logo images |
+
+Every board fills the whole screen with the Reset button in reach — no scrolling
+mid-break.
