@@ -4,6 +4,7 @@ import { redis, espnTeamsKey, espnRosterKey } from "./redis.js";
 const SPORTS: Record<string, string> = {
   nba: "basketball/nba",
   nfl: "football/nfl",
+  mlb: "baseball/mlb",
 };
 
 export interface EspnTeam {

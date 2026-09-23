@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { pool } from "./db.js";
 import { pub, boardChannel } from "./redis.js";
 
-export type Sport = "nba" | "nfl";
+export type Sport = "nba" | "nfl" | "mlb";
 
 export interface Board {
   id: string;
@@ -16,7 +16,7 @@ export interface Board {
 export class BoardError extends Error {}
 
 export function isSport(s: string): s is Sport {
-  return s === "nba" || s === "nfl";
+  return s === "nba" || s === "nfl" || s === "mlb";
 }
 
 interface BoardRow {

@@ -8,7 +8,7 @@ The original boards were single HTML files with browser-local storage. This is
 a full rewrite — a real backend with durable storage, live team data, and
 real-time sync so everyone on a break watches the same board update together.
 
-- **Live team data** — NBA and NFL teams, logos, and current rosters are pulled
+- **Live team data** — NBA, NFL and MLB teams, logos, and current rosters are pulled
   from ESPN's public API in real time (cached in Redis). No hardcoded lists.
 - **Real-time sync** — WebSockets keep every connected viewer in lockstep. Tap
   a team on your phone and it crosses off on every screen watching the board.
@@ -90,7 +90,7 @@ npm run dev
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/health` | Postgres + Redis status |
-| GET | `/api/teams/:sport` | Live teams from ESPN (`nba` / `nfl`) |
+| GET | `/api/teams/:sport` | Live teams from ESPN (`nba` / `nfl` / `mlb`) |
 | GET | `/api/teams/:sport/:teamId/roster` | Live roster for a team |
 | POST | `/api/boards` | Create a board `{ sport, name? }` |
 | GET | `/api/boards` | Recent boards |
@@ -101,7 +101,7 @@ npm run dev
 
 ## How a break works
 
-1. Open the app, pick **NBA** or **NFL**, name the break, hit create.
+1. Open the app, pick **NBA**, **NFL** or **MLB**, name the break, hit create.
 2. Share the link (a short break code like `#/board/a1b2c3d4`).
 3. Everyone viewing the board sees it live. Tap a team to cross it off —
    the cell dims, grays out, and gets a red X. Tap again to undo.
@@ -109,3 +109,12 @@ npm run dev
 
 The header counts teams remaining and flips to a "Board complete" banner when
 every team is crossed off.
+
+## MLB board
+
+The MLB board uses embroidered patch artwork instead of ESPN's logos: each
+patch was cut out of a photo into a transparent PNG in `assets/mlb/`
+(ESPN's logo is the fallback if a patch is missing). The layout lives in
+`web/src/mlb.ts`: a fixed team order — division order, two divisions per row
+of the 10 × 3 grid, with the Pirates, Dodgers, Cardinals and Royals in the
+center — and a cell color per team picked to contrast with its patch.

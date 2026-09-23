@@ -69,7 +69,7 @@ app.post("/api/boards", async (req, reply) => {
     .object({ sport: z.string(), name: z.string().optional().default("") })
     .safeParse(req.body);
   if (!body.success || !isBoardSport(body.data.sport)) {
-    return reply.code(400).send({ error: "sport must be 'nba' or 'nfl'" });
+    return reply.code(400).send({ error: "sport must be 'nba', 'nfl' or 'mlb'" });
   }
   const board = await createBoard(body.data.sport, body.data.name);
   return reply.code(201).send(board);

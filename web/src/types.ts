@@ -1,4 +1,4 @@
-export type Sport = "nba" | "nfl";
+export type Sport = "nba" | "nfl" | "mlb";
 
 export interface EspnTeam {
   id: string;

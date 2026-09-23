@@ -66,6 +66,15 @@ async function joinBoard() {
           NFL
           <span>32 teams</span>
         </button>
+        <button
+          type="button"
+          class="sport mlb"
+          :class="{ active: sport === 'mlb' }"
+          @click="sport = 'mlb'"
+        >
+          MLB
+          <span>30 teams</span>
+        </button>
       </div>
       <input
         v-model="name"
@@ -120,7 +129,7 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 900; letter-spacing: .05em; text
 }
 .card h2 { margin: 0; font-size: .95rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 
-.sports { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sports { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .sport {
   border: 2px solid var(--line);
   border-radius: 14px;
@@ -139,6 +148,7 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 900; letter-spacing: .05em; text
 .sport:active { transform: scale(.97); }
 .sport.nba.active { border-color: #f7b32b; background: rgba(247,179,43,.08); }
 .sport.nfl.active { border-color: #4ec9a8; background: rgba(78,201,168,.08); }
+.sport.mlb.active { border-color: #6aa8ff; background: rgba(106,168,255,.08); }
 
 input {
   background: var(--bg);

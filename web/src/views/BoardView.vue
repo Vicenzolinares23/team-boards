@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { api } from "../api";
 import { RealtimeClient } from "../realtime";
 import { localLogoUrl } from "../logo";
+import { orderMlbTeams, mlbColor } from "../mlb";
 import RosterModal from "../components/RosterModal.vue";
 import type { Board, EspnTeam } from "../types";
 
@@ -18,11 +19,43 @@ const conn = ref<RealtimeClient["status"]>("connecting");
 
 const selectedTeam = ref<EspnTeam | null>(null);
 
+const isMlb = computed(() => board.value?.sport === "mlb");
+
+// MLB shows its local patch artwork first; every other sport starts with ESPN.
+function logoUrl(team: EspnTeam): string {
+  if (!board.value) return "";
+  if (isMlb.value) return localLogoUrl("mlb", team) ?? team.logo ?? "";
+  return team.logo ?? localLogoUrl(board.value.sport, team) ?? "";
+}
+
+// The abbreviation sits behind the logo; MLB patch cutouts have gaps it
+// would show through, so it is hidden once that team's logo has loaded.
+const loadedLogos = ref(new Set<string>());
+
+function onLogoLoad(team: EspnTeam) {
+  if (isMlb.value) loadedLogos.value.add(team.id);
+}
+
+function cellColor(team: EspnTeam): string | null {
+  return (isMlb.value ? mlbColor(team) : null) ?? team.color;
+}
+
 function onLogoError(e: Event, team: EspnTeam) {
   const img = e.target as HTMLImageElement;
-  const local = board.value ? localLogoUrl(board.value.sport, team) : null;
-  if (local) {
-    img.src = local;
+  // @error fires again if the fallback fails too; don't retry it forever.
+  if (img.dataset.fellBack) {
+    img.style.display = "none";
+    return;
+  }
+  img.dataset.fellBack = "1";
+  const fallback = !board.value
+    ? null
+    : isMlb.value
+      ? team.logo
+      : localLogoUrl(board.value.sport, team);
+  if (fallback) {
+    img.classList.remove("patch");
+    img.src = fallback;
     img.onerror = () => {
       img.style.display = "none";
     };
@@ -44,7 +77,7 @@ async function load() {
   try {
     board.value = await api.getBoard(props.boardId);
     const data = await api.teams(board.value.sport);
-    teams.value = data.teams;
+    teams.value = board.value.sport === "mlb" ? orderMlbTeams(data.teams) : data.teams;
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Failed to load board";
   } finally {
@@ -167,14 +200,14 @@ onUnmounted(() => {
         type="button"
         class="cell"
         :class="{ taken: isTaken(team) }"
-        :style="{ background: team.color ?? '#262b34' }"
+        :style="{ background: cellColor(team) ?? '#262b34' }"
         :title="team.displayName"
         :aria-label="team.displayName"
         :aria-pressed="isTaken(team)"
         @click="toggle(team)"
       >
-        <span class="abbr" :style="{ color: readableOn(team.color) }">{{ team.abbreviation }}</span>
-        <img class="logo" :src="team.logo ?? localLogoUrl(board!.sport, team) ?? ''" :alt="''" loading="lazy" @error="onLogoError($event, team)" />
+        <span v-show="!loadedLogos.has(team.id)" class="abbr" :style="{ color: readableOn(cellColor(team)) }">{{ team.abbreviation }}</span>
+        <img class="logo" :class="{ patch: isMlb }" :src="logoUrl(team)" :alt="''" loading="lazy" @load="onLogoLoad(team)" @error="onLogoError($event, team)" />
         <span class="info" @click.stop="selectedTeam = team" title="View roster">i</span>
       </button>
     </main>
@@ -292,6 +325,8 @@ h1 { margin: 0; font-size: .95rem; font-weight: 800; letter-spacing: .05em; text
 .cell:active { transform: scale(.94); }
 
 .cell .logo { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; position: absolute; inset: 0; }
+/* the MLB patches are cut out with no margin of their own */
+.cell .logo.patch { padding: 7%; }
 .cell .abbr { font-size: clamp(.7rem, 2.2vw, 1.3rem); font-weight: 800; pointer-events: none; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 
 .cell .info {
