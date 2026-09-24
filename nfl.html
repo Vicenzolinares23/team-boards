@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>NFL Break Board</title>
+<title>Smiffs Rips · NFL Board</title>
 <style>
   :root {
     --bg: #0b0d11;
@@ -62,6 +62,21 @@
   }
 
   h1 .sport { color: var(--accent); }
+
+  /* SMIFFS RIPS: metallic gold lettering, light at the top of each letter
+     running down to a deep bronze, with a soft glow. */
+  .brand {
+    background: linear-gradient(180deg, #fff6c9 0%, #f9d976 30%, #d4a017 58%,
+                                #9c6b12 80%, #f3d27a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 1px 0 rgba(0,0,0,.7))
+            drop-shadow(0 0 6px rgba(247,196,64,.35));
+    font-weight: 900;
+    letter-spacing: .08em;
+  }
 
   .count {
     flex: 1 1 auto;
@@ -162,6 +177,8 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+    /* the logos run right to their edges; keep them off the cell border */
+    padding: 10%;
     display: block;
     pointer-events: none;
   }
@@ -197,6 +214,58 @@
   .cell.taken::before { transform: translate(-50%, -50%) rotate(42deg); }
   .cell.taken::after  { transform: translate(-50%, -50%) rotate(-42deg); }
 
+  /* ---------- tap animations (only on a tap, never on page load) ---------- */
+
+  /* Crossed off: the cell punches in with a red flash, then each stroke of
+     the X slashes in from nothing, one after the other. */
+  .cell.stamp {
+    animation: stamp .55s cubic-bezier(.3, 1.5, .5, 1);
+  }
+
+  .cell.stamp::before { animation: slash-a .2s ease-out both; }
+  .cell.stamp::after  { animation: slash-b .2s ease-out .1s both; }
+
+  @keyframes stamp {
+    0%   { transform: scale(1);    opacity: 1; filter: none;
+           box-shadow: 0 0 0 0 rgba(255,53,70,.9); }
+    30%  { transform: scale(1.13); opacity: 1; filter: none; }
+    60%  { transform: scale(.93);  opacity: 1; filter: none;
+           box-shadow: 0 0 0 10px rgba(255,53,70,0); }
+    100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(255,53,70,0); }
+  }
+
+  @keyframes slash-a {
+    from { transform: translate(-50%, -50%) rotate(42deg) scaleX(0); }
+    to   { transform: translate(-50%, -50%) rotate(42deg) scaleX(1); }
+  }
+
+  @keyframes slash-b {
+    from { transform: translate(-50%, -50%) rotate(-42deg) scaleX(0); }
+    to   { transform: translate(-50%, -50%) rotate(-42deg) scaleX(1); }
+  }
+
+  /* Un-crossed: a quick bounce back into play. */
+  .cell.unstamp {
+    animation: unstamp .34s cubic-bezier(.3, 1.6, .5, 1);
+  }
+
+  @keyframes unstamp {
+    0%   { transform: scale(.9); }
+    55%  { transform: scale(1.07); }
+    100% { transform: scale(1); }
+  }
+
+  /* Phone held upright: the gold title is long, so tighten the bar enough
+     to keep the buttons and the Boards link on screen. */
+  @media (max-width: 520px) {
+    .bar { gap: 6px; padding-left: 7px; padding-right: 7px; }
+    h1 { font-size: .8rem; }
+    .brand { letter-spacing: .03em; }
+    .btn { padding: 6px 9px; font-size: .66rem; letter-spacing: .04em; }
+    .home { font-size: .7rem; }
+    .wide { display: none; }
+  }
+
   @media (min-width: 700px) {
     .bar { padding: 9px 14px; }
     h1 { font-size: 1.1rem; }
@@ -213,11 +282,11 @@
 <body>
 
 <div class="bar">
-  <h1><span class="sport">NFL</span> Board</h1>
+  <h1><span class="brand">Smiffs Rips</span> <span class="sport">NFL</span></h1>
   <div class="count" id="count"></div>
   <button id="fs" class="btn" type="button">Full Screen</button>
   <button id="reset" class="btn" type="button">Reset</button>
-  <a class="home" href="index.html">&larr; Boards</a>
+  <a class="home" href="index.html" aria-label="All boards">&larr;<span class="wide"> Boards</span></a>
 </div>
 
 <div id="grid" role="group" aria-label="NFL teams"></div>
@@ -505,7 +574,25 @@
     }
     saveTaken();
     render();
+    animate(cells[i], isTaken(i) ? "stamp" : "unstamp");
   }
+
+  // Replays from the start even on rapid re-taps: drop both classes, force
+  // a reflow so the browser forgets the old animation, then add the new one.
+  function animate(cell, name) {
+    cell.classList.remove("stamp", "unstamp");
+    void cell.offsetWidth;
+    cell.classList.add(name);
+  }
+
+  cells.forEach(function (cell) {
+    cell.addEventListener("animationend", function (e) {
+      // the X strokes fire their own animationend; wait for the cell's
+      if (e.animationName === "stamp" || e.animationName === "unstamp") {
+        cell.classList.remove("stamp", "unstamp");
+      }
+    });
+  });
 
   function reset() {
     taken = [];
@@ -527,7 +614,7 @@
   }
 
   function syncFsBtn() {
-    fsBtn.textContent = isFullscreen() ? "Exit" : "Full Screen";
+    fsBtn.innerHTML = isFullscreen() ? "Exit" : 'Full<span class="wide"> Screen</span>';
   }
 
   if (!enter) {

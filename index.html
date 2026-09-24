@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0d11">
-<title>Break Boards</title>
+<title>Smiffs Rips</title>
 <style>
   * { box-sizing: border-box; }
 
@@ -37,6 +37,23 @@
     font-weight: 900;
     letter-spacing: .05em;
     text-transform: uppercase;
+  }
+
+  /* SMIFFS RIPS: metallic gold lettering, light at the top of each letter
+     running down to a deep bronze, with a soft glow. */
+  h1.brand {
+    font-size: 2.5rem;
+    line-height: 1.1;
+    background: linear-gradient(180deg, #fff6c9 0%, #f9d976 30%, #d4a017 58%,
+                                #9c6b12 80%, #f3d27a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 1px 0 rgba(0,0,0,.7))
+            drop-shadow(0 0 6px rgba(247,196,64,.35));
+    font-weight: 900;
+    letter-spacing: .08em;
   }
 
   p.sub {
@@ -112,7 +129,7 @@
 <body>
 
 <header>
-  <h1>Break Boards</h1>
+  <h1 class="brand">Smiffs Rips</h1>
   <p class="sub">Tap-to-cross-off team boards for live card breaks</p>
 </header>
 

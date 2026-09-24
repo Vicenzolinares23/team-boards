@@ -36,6 +36,10 @@ then visit `http://<your-computer-ip>:8000` on the phone.
 color. Tapping a cell crosses it off — the cell dims, goes grayscale, and gets a
 red X drawn over it.
 
+**It animates.** Crossing a team off stamps the cell — it punches in with a
+red flash and the X slashes across before it dims — and un-crossing gives it a
+quick bounce back. Only taps animate; reloading saved progress doesn't.
+
 **Tapping again un-crosses it.** Handy when you mis-tap mid-break — no need to
 reset the whole board.
 
@@ -61,15 +65,18 @@ separately, so an NBA break and an NFL break don't interfere with each other.
 
 ```
 assets/
-  nba/    30 team tiles + the original poster screenshot
-  nfl/    32 team tiles + the original poster screenshot
-  mlb/    30 team patch cutouts + the original patch photo
+  nba/    30 team logos (500 × 500) + the original poster screenshot
+  nfl/    32 team logos (500 × 500) + the original poster screenshot
+  mlb/    30 team logos (500 × 500) + the original patch photo
 ```
 
-The logos came from two poster screenshots — a 5×6 grid of the NBA logos and a
-4×8 grid of the NFL logos, each team on its own colored tile. Those posters were
-sliced into one image per team, so the board can show, dim, and cross off each
-team independently.
+The logos are ESPN's 500 × 500 transparent team logos, saved into the folders
+so the boards still work offline. Where a team's regular logo gets lost on its
+cell color, the board uses ESPN's dark-background version instead: the Jets and
+Giants, and the Yankees, Twins, Dodgers, Cardinals, Phillies, Nationals, Reds,
+Braves, Rockies and Rangers. They replaced the first sets of logos, which were
+sliced out of two poster screenshots and a photo of embroidered patches, and
+were too low-resolution to look sharp on a big screen.
 
 Each board looks for one image per team, named with the team's **lowercase
 abbreviation**, read relative to the HTML file:
@@ -80,18 +87,12 @@ abbreviation**, read relative to the HTML file:
 
 `.png` is tried first, then `.svg`, `.webp`, `.jpg`, `.jpeg` — so you can swap in
 better artwork later just by dropping a file with the same base name into the
-folder. Each tile is scaled to fit its cell without cropping, and the cell's
-background is set to the tile's own color, so images that already include the
-team's background color (like these) blend in seamlessly; a transparent logo
-would simply show the cell color behind it.
+folder. Each logo is scaled to fit its cell without cropping, and transparent
+logos show the cell's team color behind them.
 
 If a logo file is missing, that cell falls back to showing the team's
 abbreviation in large text on the team's color, and tap-to-cross-off keeps
 working as normal.
-
-The MLB logos came from a photo of 30 embroidered team patches laid out on a
-countertop. Each patch was cut out along its edge into a transparent PNG, so the
-cell's team color shows around it instead of the countertop.
 
 The original screenshots and photo (`Screenshot *.png`) are still in the
 folders as the source artwork. Nothing references them at runtime, so you can
@@ -142,9 +143,8 @@ two divisions per row, except that the Pirates, Dodgers, Cardinals and Royals
 are swapped into the center of the MLB board. Reorder that array to rearrange
 the board.
 
-The NBA and NFL colors were sampled from each poster tile so the cell blends
-with its artwork; the MLB colors are team colors picked to contrast with each
-patch. The logo filename is derived from the abbreviation, and text
+The NBA and NFL colors were sampled from the original poster tiles; the MLB colors are team colors picked to contrast with each
+logo. The logo filename is derived from the abbreviation, and text
 automatically switches between white and near-black depending on how bright the
 color is.
 
